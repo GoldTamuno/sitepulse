@@ -1,0 +1,35 @@
+# golangci-lint configuration. Kept deliberately close to the tool's
+# sensible defaults rather than maximally strict — the goal is catching
+# real bugs (unchecked errors, ineffectual assignments, suspicious
+# constructs) without so much noise that the lint step gets ignored or
+# disabled out of frustration, which defeats the point of having it at all.
+version: "2"
+
+linters:
+  enable:
+    - errcheck      # unchecked error return values — the most common real bug this category of tool catches
+    - govet         # same checks as `go vet`, run through the same unified interface as everything else here
+    - staticcheck   # the modern successor to golint; catches a wide range of correctness and style issues
+    - ineffassign   # assignments to a variable that are never used before being overwritten
+    - unused        # unused variables, functions, constants, imports
+    - gosec         # security-focused static analysis (e.g. weak crypto, SQL string concatenation, unsafe file perms)
+    - bodyclose     # catches unclosed http.Response.Body — a real resource-leak risk, and directly relevant given how much of this codebase makes outbound HTTP calls (checker, notify)
+
+linters-settings:
+  gosec:
+    # G104 (unchecked errors) is already covered by errcheck above with
+    # better messages; excluding it here avoids duplicate, differently
+    # worded warnings for the exact same issue.
+    excludes:
+      - G104
+
+issues:
+  # Test files get a slightly lighter touch: table-driven test helpers and
+  # fakes intentionally have some patterns (e.g. unused ctx parameters to
+  # satisfy an interface) that would otherwise need individual nolint
+  # comments scattered everywhere, which hurts readability more than it
+  # helps.
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - unused

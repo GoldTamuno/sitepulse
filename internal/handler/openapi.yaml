@@ -1,0 +1,755 @@
+openapi: 3.0.3
+info:
+  title: SitePulse API
+  description: |
+    SitePulse is a website & API uptime monitoring platform. It periodically
+    checks registered endpoints in the background, records response times
+    and status codes, computes uptime, detects outages and SSL expiry, and
+    alerts via email/webhook.
+
+    ## Authentication
+    Most endpoints require a JWT access token, obtained via `/auth/login` or
+    `/auth/register` + `/auth/login`, sent as `Authorization: Bearer <token>`.
+    Access tokens expire after 15 minutes; use `/auth/refresh` to get a new
+    one via the httpOnly refresh cookie set at login.
+
+    ## Roles
+    Three roles exist: `admin`, `operator`, `viewer`. New registrations
+    always start as `viewer`. Monitor writes (create/update/delete) require
+    `operator` or `admin`. User management requires `admin`.
+  version: "1.0.0"
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Registration, login, token refresh, logout
+  - name: Monitors
+    description: CRUD for monitored websites/APIs, plus history and stats
+  - name: Dashboard
+    description: Aggregate view across all of a user's monitors
+  - name: Users
+    description: Self-service profile and admin user management
+  - name: Health
+    description: SitePulse's own liveness endpoint
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      description: >
+        Not authenticated. Used by load balancers, Docker/Railway health
+        checks, and uptime monitors watching SitePulse itself.
+      security: []
+      responses:
+        "200":
+          description: SitePulse is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      description: >
+        Always creates the account with role `viewer` — role escalation is
+        an admin-only operation via `PATCH /admin/users/{id}/role`, never
+        something a registration payload can request for itself. Does not
+        auto-login; call `/auth/login` afterward.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSummary"
+        "400":
+          description: Validation failed (invalid email, weak password)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: >
+        Returns an access token in the response body and sets a rotating
+        refresh token as an httpOnly, Secure, SameSite=Strict cookie scoped
+        to `/api/v1/auth`. Wrong password and nonexistent email return the
+        identical error, by design, to prevent user enumeration.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          headers:
+            Set-Cookie:
+              description: httpOnly refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new access token
+      description: >
+        Reads the refresh token from the httpOnly cookie (not the request
+        body). Implements rotate-on-use: the presented token is invalidated
+        and a new one issued. Presenting an already-used (revoked) token is
+        treated as a stolen-token signal and revokes the entire token
+        family, forcing full re-authentication.
+      security: []
+      responses:
+        "200":
+          description: New access token issued; refresh cookie rotated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                    example: 900
+        "401":
+          description: Missing, invalid, expired, or reused refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: Revokes the entire refresh token family and clears the cookie. Idempotent.
+      security: []
+      responses:
+        "204":
+          description: Logged out (always succeeds, even with no valid session)
+
+  /monitors:
+    get:
+      tags: [Monitors]
+      summary: List your monitors
+      description: Returns only monitors owned by the authenticated user. Any role may call this.
+      responses:
+        "200":
+          description: List of monitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Monitor"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Monitors]
+      summary: Create a monitor
+      description: Requires `operator` or `admin` role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitorRequest"
+      responses:
+        "201":
+          description: Monitor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Caller's role cannot create monitors (viewer)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /monitors/{id}:
+    parameters:
+      - $ref: "#/components/parameters/MonitorID"
+    get:
+      tags: [Monitors]
+      summary: Get a monitor
+      description: >
+        Only the owner (or an admin) can view a monitor. A non-owner
+        requesting someone else's monitor ID gets 404, not 403 — this
+        avoids confirming the ID exists and belongs to someone, the same
+        anti-enumeration principle used on login.
+      responses:
+        "200":
+          description: Monitor details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitor"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Monitors]
+      summary: Update a monitor
+      description: Requires ownership (or admin) AND `operator`/`admin` role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitorRequest"
+      responses:
+        "200":
+          description: Monitor updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Monitors]
+      summary: Delete a monitor
+      description: Requires ownership (or admin) AND `operator`/`admin` role.
+      responses:
+        "204":
+          description: Monitor deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /monitors/{id}/checks:
+    parameters:
+      - $ref: "#/components/parameters/MonitorID"
+      - name: window
+        in: query
+        description: "Lookback window, e.g. '24h' or '7d'. Defaults to 24h."
+        schema:
+          type: string
+          example: "24h"
+      - name: limit
+        in: query
+        description: Max results (default 50, max 500).
+        schema:
+          type: integer
+          default: 50
+    get:
+      tags: [Monitors]
+      summary: Check history for a monitor
+      responses:
+        "200":
+          description: Recent checks, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Check"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /monitors/{id}/stats:
+    parameters:
+      - $ref: "#/components/parameters/MonitorID"
+      - name: window
+        in: query
+        description: "Lookback window, e.g. '24h' or '7d'. Defaults to 24h."
+        schema:
+          type: string
+          example: "7d"
+    get:
+      tags: [Monitors]
+      summary: Uptime % and average response time for a monitor
+      description: >
+        Both figures are computed in SQL over the given window. "Slow"
+        checks count toward uptime (the target was reachable, just
+        sluggish); only "down" checks count against it. Average response
+        time excludes "down" checks entirely, since a failed check's
+        recorded duration doesn't represent real service latency.
+      responses:
+        "200":
+          description: Computed stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitorStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /monitors/{id}/incidents:
+    parameters:
+      - $ref: "#/components/parameters/MonitorID"
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+    get:
+      tags: [Monitors]
+      summary: Incident history for a monitor
+      responses:
+        "200":
+          description: Incidents, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Aggregate summary across all your monitors
+      parameters:
+        - name: window
+          in: query
+          description: "Lookback window, e.g. '24h' or '7d'. Defaults to 24h."
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me:
+    get:
+      tags: [Users]
+      summary: Get your own profile
+      description: Any authenticated role. No admin check.
+      responses:
+        "200":
+          description: Your user record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /admin/users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Requires `admin` role.
+      responses:
+        "200":
+          description: Every registered user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Users]
+      summary: Get a specific user
+      description: Requires `admin` role.
+      responses:
+        "200":
+          description: The requested user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users/{id}/role:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    patch:
+      tags: [Users]
+      summary: Change a user's role
+      description: >
+        Requires `admin` role. Three safety rules, each returning a
+        distinct error: an admin cannot change their own role
+        (`cannot change your own role`, 400); the last remaining admin
+        cannot be demoted (`cannot demote the last remaining admin`, 409);
+        and the new role must be one of `admin`, `operator`, `viewer`
+        (400 otherwise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, operator, viewer]
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid role, or attempting to change your own role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Would leave the system with zero admins
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    MonitorID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Authenticated, but the role lacks this capability
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Not found, or exists but you don't have access to it (never distinguished, by design)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      example:
+        error: "monitor not found"
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          description: Minimum 12 characters, at least 3 of uppercase/lowercase/digit/symbol.
+      example:
+        email: you@example.com
+        password: CorrectHorseBattery123!
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 900
+        user:
+          $ref: "#/components/schemas/UserSummary"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+        email_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    MonitorRequest:
+      type: object
+      required: [name, url, interval_seconds, timeout_seconds]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          description: Must be an absolute http:// or https:// URL with a host.
+        type:
+          type: string
+          enum: [http, tcp]
+          default: http
+        interval_seconds:
+          type: integer
+          minimum: 10
+          maximum: 86400
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+          description: Must be less than interval_seconds.
+        expected_status_code:
+          type: integer
+          default: 200
+        active:
+          type: boolean
+          description: Only used on update; new monitors always start active.
+      example:
+        name: My Site
+        url: https://example.com
+        interval_seconds: 30
+        timeout_seconds: 10
+
+    Monitor:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+        interval_seconds:
+          type: integer
+        timeout_seconds:
+          type: integer
+        expected_status_code:
+          type: integer
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Check:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [up, down, slow]
+        status_code:
+          type: integer
+        response_time_ms:
+          type: integer
+        error:
+          type: string
+        tls_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        checked_at:
+          type: string
+          format: date-time
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [open, resolved]
+        started_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        cause:
+          type: string
+
+    MonitorStats:
+      type: object
+      properties:
+        uptime_percent:
+          type: number
+          format: float
+          example: 99.87
+        avg_response_time_ms:
+          type: integer
+        window_since:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      properties:
+        total_monitors:
+          type: integer
+        healthy_count:
+          type: integer
+          description: Most recent check was "up" or "slow"
+        unhealthy_count:
+          type: integer
+          description: Most recent check was "down"
+        pending_count:
+          type: integer
+          description: No checks recorded yet
+        avg_uptime_percent:
+          type: number
+          format: float
+        avg_response_time_ms:
+          type: integer
+        window_since:
+          type: string
+          format: date-time
+
+security:
+  - BearerAuth: []

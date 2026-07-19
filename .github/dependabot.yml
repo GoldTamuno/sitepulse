@@ -1,0 +1,25 @@
+# Dependabot opens a PR automatically when a dependency has a newer
+# version available. Each PR runs through the exact same CI pipeline
+# (.github/workflows/ci.yml) as any human-authored PR — including
+# govulncheck and the build/test gates — so an update that breaks
+# something or introduces a new vulnerability is caught before merge, not
+# after. This is the practical mechanism behind "never knowingly introduce
+# a vulnerable dependency": vulnerabilities in dependencies get surfaced
+# automatically over time, not just at the moment they were first added.
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "docker"
+    directory: "/deployments"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
