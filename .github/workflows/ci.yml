@@ -64,7 +64,7 @@ jobs:
       # but golangci-lint runs staticcheck internally, so one step here
       # covers both without duplicating work.
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
 
