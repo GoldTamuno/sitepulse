@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sitepulse
+      POSTGRES_PASSWORD: sitepulse
+      POSTGRES_DB: sitepulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sitepulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8080
+      DATABASE_URL: postgres://sitepulse:sitepulse@postgres:5432/sitepulse?sslmode=disable
+      JWT_SECRET: dev-secret-change-me
+      CHECKER_POOL_SIZE: 10
+      CHECKER_TIMEOUT: 10s
+      SCHEDULER_TICK: 5s
+      SLOW_RESPONSE_THRESHOLD: 2s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

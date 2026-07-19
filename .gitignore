@@ -1,0 +1,6 @@
+.env
+/sitepulse
+*.log
+.DS_Store
+/tmp/
+/dist/
