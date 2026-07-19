@@ -75,8 +75,7 @@ func NewPersistingRecorder(checks domain.CheckRepository, log *slog.Logger) *Per
 // failure at Error level so it's visible and investigable, just not fatal.
 func (r *PersistingRecorder) Record(ctx context.Context, check *domain.Check) {
 	if err := r.checks.Create(ctx, check); err != nil {
-		r.log.Error(
-			"failed to persist check result",
+		r.log.Error("failed to persist check result",
 			"monitor_id", check.MonitorID,
 			"error", err,
 		)

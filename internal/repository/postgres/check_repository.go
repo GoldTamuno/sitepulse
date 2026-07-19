@@ -37,8 +37,7 @@ func (r *CheckRepository) Create(ctx context.Context, c *domain.Check) error {
 		errText = &c.Error
 	}
 
-	err := r.pool.QueryRow(
-		ctx, q,
+	err := r.pool.QueryRow(ctx, q,
 		c.MonitorID, c.Status, statusCode, c.ResponseTime.Milliseconds(), errText, c.TLSExpiresAt, c.CheckedAt,
 	).Scan(&c.ID)
 	if err != nil {

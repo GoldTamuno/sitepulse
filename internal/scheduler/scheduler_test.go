@@ -25,11 +25,9 @@ func (r *fakeMonitorRepo) Create(ctx context.Context, m *domain.Monitor) error {
 func (r *fakeMonitorRepo) GetByID(ctx context.Context, id int64) (*domain.Monitor, error) {
 	return nil, domain.ErrNotFound
 }
-
 func (r *fakeMonitorRepo) ListByUser(ctx context.Context, userID int64) ([]*domain.Monitor, error) {
 	return nil, nil
 }
-
 func (r *fakeMonitorRepo) ListActive(ctx context.Context) ([]*domain.Monitor, error) {
 	return r.monitors, nil
 }

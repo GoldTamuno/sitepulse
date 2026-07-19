@@ -24,7 +24,15 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: "1.22"
+  # "stable" (not a pinned "1.22") means CI always builds and scans
+  # against the latest stable Go release. This directly matters for
+  # govulncheck: several of the vulnerabilities it originally caught here
+  # were in the Go standard library itself (crypto/tls, net/url, net/http,
+  # net/mail) at older 1.22.x patch releases, fixed in later ones. Pinning
+  # a minor version would silently drift stale over time; "stable" keeps
+  # the toolchain itself current as part of the same supply-chain
+  # discipline this phase is about.
+  GO_VERSION: "stable"
 
 jobs:
   # --- Formatting & static analysis ---

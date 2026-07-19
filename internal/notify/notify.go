@@ -57,8 +57,7 @@ func NewLoggingNotifier(log *slog.Logger) *LoggingNotifier {
 }
 
 func (n *LoggingNotifier) Notify(ctx context.Context, event Event) {
-	n.log.Warn(
-		"notification",
+	n.log.Warn("notification",
 		"kind", event.Kind,
 		"monitor_id", event.MonitorID,
 		"monitor_name", event.MonitorName,
