@@ -3,8 +3,6 @@
 # real bugs (unchecked errors, ineffectual assignments, suspicious
 # constructs) without so much noise that the lint step gets ignored or
 # disabled out of frustration, which defeats the point of having it at all.
-version: "2"
-
 linters:
   enable:
     - errcheck      # unchecked error return values — the most common real bug this category of tool catches
