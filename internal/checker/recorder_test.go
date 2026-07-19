@@ -36,9 +36,11 @@ func (r *fakeCheckRepo) Create(ctx context.Context, c *domain.Check) error {
 func (r *fakeCheckRepo) ListByMonitor(ctx context.Context, monitorID int64, since time.Time, limit int) ([]*domain.Check, error) {
 	return nil, nil
 }
+
 func (r *fakeCheckRepo) UptimeSince(ctx context.Context, monitorID int64, since time.Time) (float64, error) {
 	return 0, nil
 }
+
 func (r *fakeCheckRepo) AvgResponseTimeSince(ctx context.Context, monitorID int64, since time.Time) (time.Duration, error) {
 	return 0, nil
 }

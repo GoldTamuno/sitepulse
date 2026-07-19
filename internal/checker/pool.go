@@ -72,7 +72,8 @@ func (p *WorkerPool) worker(ctx context.Context, id int) {
 	for job := range p.jobs {
 		check := RunCheck(ctx, job.Monitor, p.slowThreshold)
 
-		p.log.Debug("check completed",
+		p.log.Debug(
+			"check completed",
 			"worker_id", id,
 			"monitor_id", job.Monitor.ID,
 			"status", check.Status,

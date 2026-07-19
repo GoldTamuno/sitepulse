@@ -25,7 +25,8 @@ func (r *MonitorRepository) Create(ctx context.Context, m *domain.Monitor) error
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at`
 
-	err := r.pool.QueryRow(ctx, q,
+	err := r.pool.QueryRow(
+		ctx, q,
 		m.UserID, m.Name, m.URL, m.Type, m.IntervalSeconds, m.TimeoutSeconds, m.ExpectedStatusCode, m.Active,
 	).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
@@ -93,7 +94,8 @@ func (r *MonitorRepository) Update(ctx context.Context, m *domain.Monitor) error
 		WHERE id = $8
 		RETURNING updated_at`
 
-	err := r.pool.QueryRow(ctx, q,
+	err := r.pool.QueryRow(
+		ctx, q,
 		m.Name, m.URL, m.Type, m.IntervalSeconds, m.TimeoutSeconds, m.ExpectedStatusCode, m.Active, m.ID,
 	).Scan(&m.UpdatedAt)
 	if err != nil {

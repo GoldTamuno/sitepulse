@@ -25,14 +25,16 @@ func (r *fakeMonitorRepo) Create(ctx context.Context, m *domain.Monitor) error {
 func (r *fakeMonitorRepo) GetByID(ctx context.Context, id int64) (*domain.Monitor, error) {
 	return nil, domain.ErrNotFound
 }
+
 func (r *fakeMonitorRepo) ListByUser(ctx context.Context, userID int64) ([]*domain.Monitor, error) {
 	return nil, nil
 }
+
 func (r *fakeMonitorRepo) ListActive(ctx context.Context) ([]*domain.Monitor, error) {
 	return r.monitors, nil
 }
 func (r *fakeMonitorRepo) Update(ctx context.Context, m *domain.Monitor) error { return nil }
-func (r *fakeMonitorRepo) Delete(ctx context.Context, id int64) error         { return nil }
+func (r *fakeMonitorRepo) Delete(ctx context.Context, id int64) error          { return nil }
 
 // capturingRecorder collects every check it receives, safely under
 // concurrent access — the scheduler's result consumer runs in its own

@@ -12,13 +12,13 @@ import (
 // numbers a landing dashboard shows before a user drills into any single
 // monitor.
 type DashboardSummary struct {
-	TotalMonitors      int
-	HealthyCount       int // most recent check was "up" or "slow"
-	UnhealthyCount     int // most recent check was "down"
-	PendingCount       int // no checks recorded yet (monitor just created)
-	AvgUptimePercent   float64
-	AvgResponseTime    time.Duration
-	WindowSince        time.Time
+	TotalMonitors    int
+	HealthyCount     int // most recent check was "up" or "slow"
+	UnhealthyCount   int // most recent check was "down"
+	PendingCount     int // no checks recorded yet (monitor just created)
+	AvgUptimePercent float64
+	AvgResponseTime  time.Duration
+	WindowSince      time.Time
 }
 
 type DashboardService struct {

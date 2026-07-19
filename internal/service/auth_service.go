@@ -43,9 +43,9 @@ type AuthTokens struct {
 }
 
 type AuthService struct {
-	users    domain.UserRepository
-	refresh  domain.RefreshTokenRepository
-	tokens   *security.TokenIssuer
+	users   domain.UserRepository
+	refresh domain.RefreshTokenRepository
+	tokens  *security.TokenIssuer
 }
 
 func NewAuthService(users domain.UserRepository, refresh domain.RefreshTokenRepository, tokens *security.TokenIssuer) *AuthService {
@@ -224,8 +224,8 @@ func (s *AuthService) issueTokenPair(ctx context.Context, user *domain.User, fam
 	}
 
 	return &AuthTokens{
-		AccessToken:       access,
-		RefreshToken:      rawRefresh,
-		RefreshExpiresAt:  expiresAt,
+		AccessToken:      access,
+		RefreshToken:     rawRefresh,
+		RefreshExpiresAt: expiresAt,
 	}, nil
 }

@@ -20,11 +20,11 @@ var (
 	ErrPasswordTooWeak  = errors.New("validation: password must include at least 3 of: uppercase, lowercase, digit, symbol")
 	ErrPasswordTooLong  = errors.New("validation: password must be under 128 characters")
 
-	ErrInvalidURL       = errors.New("validation: URL must be a valid http:// or https:// address with a host")
-	ErrInvalidName      = errors.New("validation: name must be between 1 and 100 characters")
-	ErrIntervalTooShort = errors.New("validation: interval must be at least 10 seconds")
-	ErrIntervalTooLong  = errors.New("validation: interval must be at most 86400 seconds (24 hours)")
-	ErrTimeoutInvalid   = errors.New("validation: timeout must be between 1 and 60 seconds")
+	ErrInvalidURL             = errors.New("validation: URL must be a valid http:// or https:// address with a host")
+	ErrInvalidName            = errors.New("validation: name must be between 1 and 100 characters")
+	ErrIntervalTooShort       = errors.New("validation: interval must be at least 10 seconds")
+	ErrIntervalTooLong        = errors.New("validation: interval must be at most 86400 seconds (24 hours)")
+	ErrTimeoutInvalid         = errors.New("validation: timeout must be between 1 and 60 seconds")
 	ErrTimeoutExceedsInterval = errors.New("validation: timeout must be less than the check interval")
 )
 

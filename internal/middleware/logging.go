@@ -26,7 +26,8 @@ func RequestLogger(log *slog.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(ww, r)
 
-			log.Info("http_request",
+			log.Info(
+				"http_request",
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", ww.Status(),
