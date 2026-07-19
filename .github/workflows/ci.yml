@@ -33,6 +33,7 @@ env:
   # the toolchain itself current as part of the same supply-chain
   # discipline this phase is about.
   GO_VERSION: "stable"
+  GO_VERSION_LINT: "1.23"
 
 jobs:
   # --- Formatting & static analysis ---
@@ -114,7 +115,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ env.GO_VERSION_LINT }}
           cache: true
 
       - name: Build
