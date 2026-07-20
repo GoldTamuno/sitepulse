@@ -3,6 +3,13 @@
 # real bugs (unchecked errors, ineffectual assignments, suspicious
 # constructs) without so much noise that the lint step gets ignored or
 # disabled out of frustration, which defeats the point of having it at all.
+#
+# Written against golangci-lint v1.x's config schema (no top-level
+# "version" key — that field only exists in v2's schema and is REJECTED
+# by v1, not just ignored). If CI's installed golangci-lint version is
+# ever bumped to v2.x, this file's "linters-settings"/"issues" keys move
+# under a restructured schema and would need updating too.
+
 linters:
   enable:
     - errcheck      # unchecked error return values — the most common real bug this category of tool catches

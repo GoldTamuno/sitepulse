@@ -90,9 +90,7 @@ func (h *MonitorHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(toMonitorResponse(m))
+	writeJSON(w, http.StatusCreated, toMonitorResponse(m))
 }
 
 func (h *MonitorHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -113,8 +111,7 @@ func (h *MonitorHandler) List(w http.ResponseWriter, r *http.Request) {
 		resp = append(resp, toMonitorResponse(m))
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *MonitorHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -136,8 +133,7 @@ func (h *MonitorHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toMonitorResponse(m))
+	writeJSON(w, http.StatusOK, toMonitorResponse(m))
 }
 
 func (h *MonitorHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -173,8 +169,7 @@ func (h *MonitorHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toMonitorResponse(m))
+	writeJSON(w, http.StatusOK, toMonitorResponse(m))
 }
 
 func (h *MonitorHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -266,8 +261,7 @@ func (h *MonitorHandler) GetChecks(w http.ResponseWriter, r *http.Request) {
 	for _, c := range checks {
 		resp = append(resp, toCheckResponse(c))
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *MonitorHandler) GetStats(w http.ResponseWriter, r *http.Request) {
@@ -289,8 +283,7 @@ func (h *MonitorHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"uptime_percent":       roundTo2(stats.UptimePercent),
 		"avg_response_time_ms": stats.AvgResponseTime.Milliseconds(),
 		"window_since":         stats.WindowSince.Format(time.RFC3339),
@@ -320,8 +313,7 @@ func (h *MonitorHandler) GetIncidents(w http.ResponseWriter, r *http.Request) {
 	for _, i := range incidents {
 		resp = append(resp, toIncidentResponse(i))
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 type checkResponse struct {

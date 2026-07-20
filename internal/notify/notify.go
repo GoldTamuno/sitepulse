@@ -23,8 +23,8 @@ type Event struct {
 	MonitorName string
 	MonitorURL  string
 	Kind        EventKind
-	Cause       string // populated for EventIncidentOpened
-	Duration    string // populated for EventIncidentResolved, human-readable (e.g. "4m32s")
+	Cause       string        // populated for EventIncidentOpened
+	Duration    string        // populated for EventIncidentResolved, human-readable (e.g. "4m32s")
 }
 
 type EventKind string

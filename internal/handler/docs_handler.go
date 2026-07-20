@@ -2,15 +2,17 @@ package handler
 
 import (
 	"embed"
+	"log/slog"
 	"net/http"
 )
 
 // DocsHandler serves the OpenAPI spec itself and a browsable Swagger UI on
-// top of it. The spec file is embedded into the compiled binary via
-// go:embed — this means API docs ship as part of the binary with zero
-// runtime file-path dependencies (no risk of "docs/openapi.yaml not
-// found" because of a wrong working directory in Docker/Railway), and no
-// separate deploy step to keep the docs in sync with the running binary.
+// top of it. The spec file is embedded into the compiled binary using Go's
+// embed directive (see the line above specFS below) — this means API docs
+// ship as part of the binary with zero runtime file-path dependencies (no
+// risk of "docs/openapi.yaml not found" because of a wrong working
+// directory in Docker/Railway), and no separate deploy step to keep the
+// docs in sync with the running binary.
 type DocsHandler struct {
 	spec []byte
 }
@@ -30,7 +32,9 @@ func NewDocsHandler() (*DocsHandler, error) {
 // Insomnia, or any other OpenAPI-aware tool, not just the bundled UI below.
 func (h *DocsHandler) Spec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml")
-	w.Write(h.spec)
+	if _, err := w.Write(h.spec); err != nil {
+		slog.Default().Error("failed to write OpenAPI spec response", "error", err)
+	}
 }
 
 // UI serves a minimal HTML shell that loads Swagger UI's static assets
@@ -43,7 +47,9 @@ func (h *DocsHandler) Spec(w http.ResponseWriter, r *http.Request) {
 // CDN being reachable).
 func (h *DocsHandler) UI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(swaggerUIHTML))
+	if _, err := w.Write([]byte(swaggerUIHTML)); err != nil {
+		slog.Default().Error("failed to write Swagger UI response", "error", err)
+	}
 }
 
 const swaggerUIHTML = `<!DOCTYPE html>

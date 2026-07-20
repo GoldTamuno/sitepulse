@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -94,5 +95,7 @@ func ClaimsFromContext(ctx context.Context) (*security.Claims, error) {
 func writeUnauthorized(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(`{"error":"unauthorized"}`))
+	if _, err := w.Write([]byte(`{"error":"unauthorized"}`)); err != nil {
+		slog.Default().Error("failed to write unauthorized response", "error", err)
+	}
 }

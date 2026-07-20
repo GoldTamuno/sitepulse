@@ -55,8 +55,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toUserResponse(u))
+	writeJSON(w, http.StatusOK, toUserResponse(u))
 }
 
 // List and Get are mounted behind RequireRole(admin) at the router level
@@ -77,8 +76,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	for _, u := range users {
 		resp = append(resp, toUserResponse(u))
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -97,8 +95,7 @@ func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toUserResponse(u))
+	writeJSON(w, http.StatusOK, toUserResponse(u))
 }
 
 type updateRoleRequest struct {
@@ -127,8 +124,7 @@ func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toUserResponse(u))
+	writeJSON(w, http.StatusOK, toUserResponse(u))
 }
 
 // handleError follows the same "never leak internals" caution used

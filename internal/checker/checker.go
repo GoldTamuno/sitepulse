@@ -29,8 +29,8 @@ import (
 // target responded and told us it's unhealthy" is the whole reason this
 // isn't a single blanket retry-everything policy.
 const (
-	maxRetries   = 2
-	retryBackoff = 500 * time.Millisecond
+	maxRetries    = 2
+	retryBackoff  = 500 * time.Millisecond
 )
 
 // httpClient is shared across all checks rather than constructed per-call.

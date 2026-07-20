@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -34,8 +33,7 @@ func (h *DashboardHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"total_monitors":       summary.TotalMonitors,
 		"healthy_count":        summary.HealthyCount,
 		"unhealthy_count":      summary.UnhealthyCount,

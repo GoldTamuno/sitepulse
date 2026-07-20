@@ -94,6 +94,16 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		return false, fmt.Errorf("security: decoding hash: %w", err)
 	}
 
+	// A real Argon2id hash is always a small, fixed number of bytes
+	// (argonKeyLength = 32 here). A storedHash this large could only come
+	// from a corrupted or tampered stored value — reject it explicitly
+	// rather than converting its length to uint32 unchecked, which is
+	// what gosec's G115 rule flags as a theoretical integer-overflow risk.
+	const maxHashLength = 1 << 20 // 1 MiB — generous upper bound, nowhere close to a real hash's size
+	if len(storedHash) > maxHashLength {
+		return false, errors.New("security: stored hash exceeds maximum expected length")
+	}
+
 	computedHash := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(storedHash)))
 
 	match := subtle.ConstantTimeCompare(storedHash, computedHash) == 1
