@@ -108,9 +108,9 @@ func (s *MonitorService) Get(ctx context.Context, requesterID int64, requesterRo
 // not two — the service internally decides these two numbers belong
 // together.
 type MonitorStats struct {
-	UptimePercent    float64
-	AvgResponseTime  time.Duration
-	WindowSince      time.Time
+	UptimePercent   float64
+	AvgResponseTime time.Duration
+	WindowSince     time.Time
 }
 
 // Checks returns recent check history for a monitor, ownership-checked
