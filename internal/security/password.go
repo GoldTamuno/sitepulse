@@ -104,7 +104,7 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		return false, errors.New("security: stored hash exceeds maximum expected length")
 	}
 
-	computedHash := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(storedHash)))
+	computedHash := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(storedHash))) // #nosec G115
 
 	match := subtle.ConstantTimeCompare(storedHash, computedHash) == 1
 	return match, nil
